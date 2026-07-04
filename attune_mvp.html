@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ATTUNE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+  :root {
+    --bg: #0c0c0d;
+    --surface: #141416;
+    --surface2: #1c1c1f;
+    --border: #252528;
+    --border2: #2e2e32;
+    --text: #e4e0d8;
+    --text-muted: #5a5858;
+    --text-dim: #8a8784;
+    --gold: #c9a96e;
+    --gold-soft: rgba(201,169,110,0.10);
+    --gold-glow: rgba(201,169,110,0.20);
+    --red: #e05c4b;
+    --red-soft: rgba(224,92,75,0.12);
+    --green: #5db88a;
+    --green-soft: rgba(93,184,138,0.12);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 420px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+  }
+
+  .session-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: 38px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+    transition: background 0.3s ease;
+  }
+
+  .status-dot.recording { background: var(--red); animation: blink 1s ease-in-out infinite; }
+  .status-dot.ready { background: var(--green); }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .status-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    flex: 1;
+  }
+
+  .mic-source {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Notes feed ── */
+  .notes-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: none;
+  }
+  .notes-feed::-webkit-scrollbar { display: none; }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 40px 24px;
+    gap: 12px;
+  }
+
+  .empty-icon {
+    font-size: 28px;
+    opacity: 0.3;
+  }
+
+  .empty-hint {
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 220px;
+  }
+
+  .empty-hint span {
+    color: var(--text-dim);
+  }
+
+  /* Note cards */
+  .note-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    animation: slideIn 0.3s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .note-card.tap-event {
+    border-color: var(--border2);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .note-card.voice-note {
+    border-left: 2px solid var(--gold);
+  }
+
+  .note-card.processing {
+    border-left: 2px solid var(--border2);
+  }
+
+  .note-type-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
+  .badge-tap {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border2);
+  }
+
+  .badge-voice {
+    background: var(--gold-soft);
+    color: var(--gold);
+    border: 1px solid rgba(201,169,110,0.2);
+  }
+
+  .note-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .tap-count-inline {
+    font-size: 13px;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  .note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .note-duration {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .note-text {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  .note-text.processing {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  /* Audio waveform placeholder */
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 24px;
+    margin-bottom: 10px;
+  }
+
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--gold);
+    opacity: 0.5;
+    transition: height 0.1s ease;
+  }
+
+  /* ── Bottom controls ── */
+  .bottom-section {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    padding: 12px 24px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat {
+    flex: 1;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+
+  .stat-value.gold { color: var(--gold); }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .stat-divider {
+    width: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* Main button */
+  .button-area {
+    padding: 20px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .main-btn {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .main-btn::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    transition: border-color 0.3s ease, opacity 0.3s ease;
+  }
+
+  .main-btn::after {
+    content: '';
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    opacity: 0.4;
+  }
+
+  .main-btn.idle {
+    background: var(--surface2);
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  .main-btn.idle::before { border-color: var(--border2); }
+
+  .main-btn.pressed {
+    transform: scale(0.93);
+  }
+
+  .main-btn.recording {
+    background: var(--red-soft);
+    box-shadow: 0 0 32px rgba(224,92,75,0.25);
+  }
+
+  .main-btn.recording::before {
+    border-color: var(--red);
+    animation: ring-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes ring-pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.05); }
+  }
+
+  .btn-icon {
+    font-size: 26px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .btn-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  /* Recording timer */
+  .rec-timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--red);
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .rec-timer.visible { opacity: 1; }
+
+  /* Ripple on tap */
+  .ripple {
+    position: fixed;
+    border-radius: 50%;
+    background: rgba(201,169,110,0.15);
+    transform: scale(0);
+    animation: ripple-anim 0.5s ease-out forwards;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  @keyframes ripple-anim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 24px;
+    padding: 8px 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 200;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">ATTUNE</div>
+    <div class="session-info">
+      <div id="sessionDate">—</div>
+      <div id="sessionTime">—</div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">Готов к работе</div>
+    <div class="mic-source" id="micSource">🎧 наушники / 📱 телефон</div>
+  </div>
+
+  <!-- Notes feed -->
+  <div class="notes-feed" id="notesFeed">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">◎</div>
+      <div class="empty-hint">
+        <span>Одно нажатие</span> — фиксирует момент<br>
+        <span>Двойное нажатие</span> — голосовая заметка
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom -->
+  <div class="bottom-section">
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-value" id="tapCount">0</div>
+        <div class="stat-label">Нажатий</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-value gold" id="noteCount">0</div>
+        <div class="stat-label">Заметок</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-value" id="sessionDuration">0′</div>
+        <div class="stat-label">Сессия</div>
+      </div>
+    </div>
+
+    <div class="button-area">
+      <div class="rec-timer" id="recTimer">● 0:00</div>
+      <button class="main-btn idle" id="mainBtn" aria-label="Нажать">
+        <span class="btn-icon" id="btnIcon">◉</span>
+      </button>
+      <div class="btn-hint" id="btnHint">1× — заметить · 2× — записать</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let tapCount = 0;
+let noteCount = 0;
+let tapTimer = null;
+let tapBuffer = 0;
+const DOUBLE_TAP_DELAY = 300;
+
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let recStartTime = null;
+let recTimerInterval = null;
+let recognition = null;
+let currentTranscript = '';
+
+let sessionStart = Date.now();
+let sessionInterval = null;
+
+// Audio context for beep
+let audioCtx = null;
+
+// ── Init ──
+function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  startSessionTimer();
+  detectMicSource();
+  initSpeechRecognition();
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('sessionDate').textContent =
+    now.toLocaleDateString('ru-RU', { day:'numeric', month:'long' });
+  document.getElementById('sessionTime').textContent =
+    now.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+}
+
+function startSessionTimer() {
+  sessionInterval = setInterval(() => {
+    const mins = Math.floor((Date.now() - sessionStart) / 60000);
+    document.getElementById('sessionDuration').textContent = mins + '′';
+  }, 30000);
+}
+
+function detectMicSource() {
+  if (!navigator.mediaDevices) return;
+  navigator.mediaDevices.enumerateDevices().then(devices => {
+    const hasHeadset = devices.some(d =>
+      d.kind === 'audioinput' && d.label &&
+      (d.label.toLowerCase().includes('headset') ||
+       d.label.toLowerCase().includes('bluetooth') ||
+       d.label.toLowerCase().includes('airpod') ||
+       d.label.toLowerCase().includes('earphone') ||
+       d.label.toLowerCase().includes('headphone'))
+    );
+    document.getElementById('micSource').textContent =
+      hasHeadset ? '🎧 наушники' : '📱 телефон';
+  }).catch(() => {});
+}
+
+// ── Beep ──
+function playBeep(freq = 880, duration = 120, type = 'sine') {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + duration / 1000);
+  } catch(e) {}
+}
+
+function playStartBeep() {
+  playBeep(880, 100);
+  setTimeout(() => playBeep(1100, 80), 110);
+}
+
+function playStopBeep() {
+  playBeep(660, 100);
+  setTimeout(() => playBeep(440, 120), 110);
+}
+
+function playTapBeep() {
+  playBeep(600, 60, 'sine');
+}
+
+// ── Speech Recognition ──
+function initSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'ru-RU';
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        final += e.results[i][0].transcript;
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    currentTranscript += final;
+    // Update live card
+    const liveCard = document.getElementById('live-note-card');
+    if (liveCard) {
+      const textEl = liveCard.querySelector('.note-text');
+      if (textEl) {
+        textEl.textContent = (currentTranscript + interim) || '...слушаю...';
+        textEl.classList.remove('processing');
+      }
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error !== 'aborted') {
+      setStatus('Ошибка микрофона', 'default');
+    }
+  };
+}
+
+// ── Button tap handler ──
+const mainBtn = document.getElementById('mainBtn');
+
+mainBtn.addEventListener('click', handleBtnClick);
+mainBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  mainBtn.classList.add('pressed');
+}, { passive: false });
+mainBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  mainBtn.classList.remove('pressed');
+  handleBtnClick(e);
+}, { passive: false });
+mainBtn.addEventListener('touchcancel', () => mainBtn.classList.remove('pressed'));
+mainBtn.addEventListener('mouseup', () => mainBtn.classList.remove('pressed'));
+
+function handleBtnClick(e) {
+  if (isRecording) {
+    stopRecording();
+    return;
+  }
+
+  tapBuffer++;
+
+  if (tapBuffer === 1) {
+    tapTimer = setTimeout(() => {
+      if (tapBuffer === 1) {
+        onSingleTap(e);
+      }
+      tapBuffer = 0;
+    }, DOUBLE_TAP_DELAY);
+  } else if (tapBuffer === 2) {
+    clearTimeout(tapTimer);
+    tapBuffer = 0;
+    onDoubleTap(e);
+  }
+
+  // Ripple
+  createRipple(e);
+}
+
+function createRipple(e) {
+  const btn = mainBtn;
+  const rect = btn.getBoundingClientRect();
+  const size = 88;
+  const ripple = document.createElement('div');
+  ripple.className = 'ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${rect.left}px;top:${rect.top}px;`;
+  document.body.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+}
+
+// ── Single tap ──
+function onSingleTap(e) {
+  playTapBeep();
+  tapCount++;
+  document.getElementById('tapCount').textContent = tapCount;
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  addTapCard(tapCount, timeStr);
+  hideEmpty();
+  showToast('Момент зафиксирован');
+  setStatus(`Нажатие #${tapCount} — ${timeStr}`, 'ready');
+  setTimeout(() => setStatus('Готов к работе', 'default'), 2000);
+}
+
+// ── Double tap ──
+function onDoubleTap(e) {
+  startRecording();
+}
+
+// ── Recording ──
+async function startRecording() {
+  if (isRecording) return;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    isRecording = true;
+    currentTranscript = '';
+    audioChunks = [];
+    recStartTime = Date.now();
+
+    // UI
+    mainBtn.classList.remove('idle');
+    mainBtn.classList.add('recording');
+    document.getElementById('btnIcon').textContent = '■';
+    document.getElementById('btnHint').textContent = 'Нажми чтобы остановить';
+    document.getElementById('statusDot').classList.add('recording');
+    setStatus('Запись...', 'recording');
+    document.getElementById('recTimer').classList.add('visible');
+
+    playStartBeep();
+    detectMicSource();
+    hideEmpty();
+
+    // Live card
+    addLiveNoteCard();
+
+    // MediaRecorder
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      finalizeNote();
+    };
+    mediaRecorder.start(100);
+
+    // Speech recognition
+    if (recognition) {
+      try { recognition.start(); } catch(e) {}
+    }
+
+    // Timer
+    recTimerInterval = setInterval(updateRecTimer, 500);
+
+  } catch(err) {
+    showToast('Нет доступа к микрофону');
+    setStatus('Ошибка: нет доступа к микрофону', 'default');
+  }
+}
+
+function stopRecording() {
+  if (!isRecording) return;
+  isRecording = false;
+
+  playStopBeep();
+
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+
+  clearInterval(recTimerInterval);
+
+  // UI reset
+  mainBtn.classList.remove('recording');
+  mainBtn.classList.add('idle');
+  document.getElementById('btnIcon').textContent = '◉';
+  document.getElementById('btnHint').textContent = '1× — заметить · 2× — записать';
+  document.getElementById('statusDot').classList.remove('recording');
+  document.getElementById('recTimer').classList.remove('visible');
+  setStatus('Обработка...', 'default');
+}
+
+function updateRecTimer() {
+  const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  document.getElementById('recTimer').textContent =
+    `● ${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function finalizeNote() {
+  const duration = Math.floor((Date.now() - recStartTime) / 1000);
+  const m = Math.floor(duration / 60);
+  const s = duration % 60;
+  const durationStr = m > 0 ? `${m}:${s.toString().padStart(2,'0')}` : `0:${s.toString().padStart(2,'0')}`;
+
+  const liveCard = document.getElementById('live-note-card');
+  if (liveCard) {
+    liveCard.id = '';
+    liveCard.classList.remove('processing');
+    liveCard.classList.add('voice-note');
+
+    const textEl = liveCard.querySelector('.note-text');
+    const durEl = liveCard.querySelector('.note-duration');
+
+    if (durEl) durEl.textContent = durationStr;
+
+    if (currentTranscript.trim()) {
+      if (textEl) {
+        textEl.textContent = currentTranscript.trim();
+        textEl.classList.remove('processing');
+      }
+    } else {
+      if (textEl) {
+        textEl.textContent = recognition
+          ? 'Транскрипция недоступна — аудио сохранено'
+          : 'Web Speech API недоступен в этом браузере';
+        textEl.classList.add('processing');
+      }
+    }
+
+    noteCount++;
+    document.getElementById('noteCount').textContent = noteCount;
+  }
+
+  setStatus('Заметка сохранена', 'ready');
+  showToast('Заметка сохранена');
+  setTimeout(() => setStatus('Готов к работе', 'default'), 2500);
+
+  // Scroll to bottom
+  scrollFeed();
+}
+
+// ── Card builders ──
+function addTapCard(count, timeStr) {
+  const feed = document.getElementById('notesFeed');
+  const card = document.createElement('div');
+  card.className = 'note-card tap-event';
+  card.innerHTML = `
+    <span class="note-type-badge badge-tap">Момент</span>
+    <span class="tap-count-inline">Нажатие #${count}</span>
+    <span class="note-time">${timeStr}</span>
+  `;
+  feed.appendChild(card);
+  scrollFeed();
+}
+
+function addLiveNoteCard() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+
+  const feed = document.getElementById('notesFeed');
+  const card = document.createElement('div');
+  card.className = 'note-card processing';
+  card.id = 'live-note-card';
+
+  // Generate waveform bars
+  const bars = Array.from({length: 20}, (_, i) => {
+    const h = 4 + Math.random() * 16;
+    return `<div class="wave-bar" style="height:${h}px"></div>`;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="note-header">
+      <span class="note-type-badge badge-voice">Голос</span>
+      <span class="note-duration" style="color:var(--text-muted)">—</span>
+      <span class="note-time">${timeStr}</span>
+    </div>
+    <div class="waveform">${bars}</div>
+    <div class="note-text processing">...слушаю...</div>
+  `;
+
+  feed.appendChild(card);
+  scrollFeed();
+
+  // Animate waveform while recording
+  const waveInterval = setInterval(() => {
+    if (!isRecording) { clearInterval(waveInterval); return; }
+    card.querySelectorAll('.wave-bar').forEach(bar => {
+      bar.style.height = (4 + Math.random() * 18) + 'px';
+    });
+  }, 120);
+}
+
+// ── Helpers ──
+function hideEmpty() {
+  const empty = document.getElementById('emptyState');
+  if (empty) empty.style.display = 'none';
+}
+
+function scrollFeed() {
+  const feed = document.getElementById('notesFeed');
+  setTimeout(() => feed.scrollTop = feed.scrollHeight, 50);
+}
+
+function setStatus(text, type) {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot';
+  if (type === 'recording') dot.classList.add('recording');
+  if (type === 'ready') dot.classList.add('ready');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>
