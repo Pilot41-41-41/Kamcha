@@ -267,6 +267,59 @@
     transition: height 0.1s ease;
   }
 
+  /* Audio player */
+  .audio-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+  }
+
+  .play-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--gold);
+    color: #0c0c0d;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .play-btn:active { opacity: 0.7; }
+
+  .audio-progress {
+    flex: 1;
+    height: 3px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .audio-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    border-radius: 2px;
+    transition: width 0.1s linear;
+  }
+
+  .audio-dur {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
   /* ── Bottom controls ── */
   .bottom-section {
     flex-shrink: 0;
@@ -614,32 +667,48 @@ function initSpeechRecognition() {
   recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = 'ru-RU';
+  recognition.maxAlternatives = 1;
 
   recognition.onresult = (e) => {
     let interim = '';
     let final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) {
-        final += e.results[i][0].transcript;
+        final += e.results[i][0].transcript + ' ';
       } else {
         interim += e.results[i][0].transcript;
       }
     }
-    currentTranscript += final;
-    // Update live card
+    if (final) currentTranscript += final;
     const liveCard = document.getElementById('live-note-card');
     if (liveCard) {
       const textEl = liveCard.querySelector('.note-text');
       if (textEl) {
-        textEl.textContent = (currentTranscript + interim) || '...слушаю...';
+        const display = (currentTranscript + interim).trim();
+        textEl.textContent = display || '...слушаю...';
         textEl.classList.remove('processing');
       }
     }
   };
 
+  recognition.onend = () => {
+    // Auto-restart if still recording
+    if (isRecording) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
+
   recognition.onerror = (e) => {
-    if (e.error !== 'aborted') {
-      setStatus('Ошибка микрофона', 'default');
+    if (e.error === 'network') {
+      setStatus('Нет сети для транскрипции', 'default');
+    } else if (e.error === 'not-allowed') {
+      setStatus('Нет доступа к микрофону', 'default');
+    }
+    // Restart on recoverable errors
+    if (isRecording && e.error !== 'not-allowed' && e.error !== 'aborted') {
+      setTimeout(() => {
+        if (isRecording) try { recognition.start(); } catch(e) {}
+      }, 300);
     }
   };
 }
@@ -809,6 +878,10 @@ function finalizeNote() {
   const s = duration % 60;
   const durationStr = m > 0 ? `${m}:${s.toString().padStart(2,'0')}` : `0:${s.toString().padStart(2,'0')}`;
 
+  // Create audio blob for playback
+  const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+  const audioUrl = URL.createObjectURL(audioBlob);
+
   const liveCard = document.getElementById('live-note-card');
   if (liveCard) {
     liveCard.id = '';
@@ -817,8 +890,22 @@ function finalizeNote() {
 
     const textEl = liveCard.querySelector('.note-text');
     const durEl = liveCard.querySelector('.note-duration');
+    const waveEl = liveCard.querySelector('.waveform');
 
     if (durEl) durEl.textContent = durationStr;
+
+    // Replace waveform with audio player
+    if (waveEl) {
+      waveEl.outerHTML = `
+        <div class="audio-player">
+          <button class="play-btn" onclick="togglePlay(this, '${audioUrl}')">▶</button>
+          <div class="audio-progress">
+            <div class="audio-bar" id="bar-${noteCount}"></div>
+          </div>
+          <span class="audio-dur">${durationStr}</span>
+        </div>
+      `;
+    }
 
     if (currentTranscript.trim()) {
       if (textEl) {
@@ -827,9 +914,7 @@ function finalizeNote() {
       }
     } else {
       if (textEl) {
-        textEl.textContent = recognition
-          ? 'Транскрипция недоступна — аудио сохранено'
-          : 'Web Speech API недоступен в этом браузере';
+        textEl.textContent = '🎙 Аудио записано — нажми ▶ чтобы прослушать';
         textEl.classList.add('processing');
       }
     }
@@ -841,9 +926,45 @@ function finalizeNote() {
   setStatus('Заметка сохранена', 'ready');
   showToast('Заметка сохранена');
   setTimeout(() => setStatus('Готов к работе', 'default'), 2500);
-
-  // Scroll to bottom
   scrollFeed();
+}
+
+// ── Audio player ──
+let currentAudio = null;
+let currentPlayBtn = null;
+
+function togglePlay(btn, url) {
+  if (currentAudio && currentPlayBtn && currentPlayBtn !== btn) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentPlayBtn.textContent = '▶';
+  }
+
+  if (!btn._audio) {
+    btn._audio = new Audio(url);
+    btn._audio.onended = () => {
+      btn.textContent = '▶';
+      currentAudio = null;
+      currentPlayBtn = null;
+    };
+    btn._audio.ontimeupdate = () => {
+      const pct = (btn._audio.currentTime / btn._audio.duration) * 100;
+      const bar = btn.closest('.audio-player')?.querySelector('.audio-bar');
+      if (bar) bar.style.width = pct + '%';
+    };
+  }
+
+  if (btn._audio.paused) {
+    btn._audio.play();
+    btn.textContent = '⏸';
+    currentAudio = btn._audio;
+    currentPlayBtn = btn;
+  } else {
+    btn._audio.pause();
+    btn.textContent = '▶';
+    currentAudio = null;
+    currentPlayBtn = null;
+  }
 }
 
 // ── Card builders ──
