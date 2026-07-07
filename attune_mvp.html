@@ -5,118 +5,266 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ATTUNE</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@300;400&family=Instrument+Sans:wght@300;400;500&display=swap');
-  :root {
-    --bg:#0c0c0d; --surface:#141416; --surface2:#1c1c1f;
-    --border:#252528; --border2:#2e2e32;
-    --text:#e4e0d8; --text-muted:#5a5858; --text-dim:#8a8784;
-    --gold:#c9a96e; --gold-soft:rgba(201,169,110,0.10);
-    --red:#e05c4b; --red-soft:rgba(224,92,75,0.12); --green:#5db88a;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;overflow:hidden;user-select:none;}
-  .app{display:flex;flex-direction:column;height:100vh;max-width:430px;margin:0 auto;}
-  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
-  .logo{font-family:'DM Serif Display',serif;font-size:20px;letter-spacing:0.18em;color:var(--gold);}
-  .session-info{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-align:right;line-height:1.6;}
-  .status-bar{padding:8px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;min-height:34px;}
-  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);flex-shrink:0;transition:background 0.3s;}
-  .status-dot.recording{background:var(--red);animation:blink 1s infinite;}
-  .status-dot.ready{background:var(--green);}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-  .status-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);flex:1;}
-  .mic-source{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);}
-  .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-  .tab{flex:1;padding:10px 4px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
-  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}
-  .tab-panel{display:none;flex:1;overflow-y:auto;scrollbar-width:none;}
-  .tab-panel::-webkit-scrollbar{display:none;}
-  .tab-panel.active{display:flex;flex-direction:column;}
-  .feed{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
-  .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);text-align:center;padding:40px 24px;gap:12px;}
-  .empty-icon{font-size:28px;opacity:0.3;}
-  .empty-hint{font-size:13px;line-height:1.7;max-width:220px;}
-  .empty-hint span{color:var(--text-dim);}
-  .note-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;animation:slideIn 0.3s ease both;}
-  @keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .note-card.tap-event{padding:9px 14px;display:flex;align-items:center;gap:10px;}
-  .note-card.voice-note{border-left:2px solid var(--gold);}
-  .note-card.live-card{border-left:2px solid var(--border2);}
-  .badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:20px;flex-shrink:0;}
-  .badge-tap{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border2);}
-  .badge-voice{background:var(--gold-soft);color:var(--gold);border:1px solid rgba(201,169,110,0.2);}
-  .note-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-left:auto;flex-shrink:0;}
-  .tap-inline{font-size:13px;color:var(--text-dim);flex:1;}
-  .note-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-  .note-dur{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);}
-  .note-text{font-size:13px;line-height:1.65;color:var(--text);font-weight:300;}
-  .note-text.dim{color:var(--text-muted);font-style:italic;font-size:12px;}
-  .waveform{display:flex;align-items:center;gap:2px;height:22px;margin-bottom:8px;}
-  .wave-bar{width:3px;border-radius:2px;background:var(--gold);opacity:0.5;transition:height 0.1s;}
-  .audio-player{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border2);}
-  .play-btn{width:26px;height:26px;border-radius:50%;border:none;background:var(--gold);color:#0c0c0d;font-size:9px;cursor:pointer;flex-shrink:0;}
-  .audio-progress{flex:1;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;}
-  .audio-bar{height:100%;width:0%;background:var(--gold);border-radius:2px;transition:width 0.1s linear;}
-  .audio-dur-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);flex-shrink:0;}
-  .transcript-item{background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--gold);border-radius:12px;padding:12px 14px;animation:slideIn 0.3s ease both;}
-  .transcript-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-bottom:8px;display:flex;gap:12px;}
-  .transcript-text{font-size:13px;line-height:1.7;color:var(--text);font-weight:300;}
-  .transcript-text.empty-t{color:var(--text-muted);font-style:italic;font-size:12px;}
-  .stats-section{padding:16px;display:flex;flex-direction:column;gap:12px;}
-  .stats-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
-  .stats-card-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
-  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .stat-box{text-align:center;padding:10px;background:var(--surface2);border-radius:8px;}
-  .stat-box-val{font-family:'DM Serif Display',serif;font-size:26px;color:var(--text);line-height:1;margin-bottom:4px;}
-  .stat-box-val.gold{color:var(--gold);}
-  .stat-box-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;}
-  .day-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
-  .day-row:last-child{border-bottom:none;}
-  .day-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);width:72px;flex-shrink:0;}
-  .day-bar-wrap{flex:1;height:5px;background:var(--border2);border-radius:3px;overflow:hidden;}
-  .day-bar{height:100%;background:var(--gold);border-radius:3px;transition:width 0.6s ease;}
-  .day-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);width:20px;text-align:right;flex-shrink:0;}
-  .bottom-section{flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);}
-  .stats-row{display:flex;padding:10px 20px;border-bottom:1px solid var(--border);}
-  .stat{flex:1;text-align:center;}
-  .stat-value{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text);line-height:1;margin-bottom:2px;}
-  .stat-value.gold{color:var(--gold);}
-  .stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;}
-  .stat-divider{width:1px;background:var(--border);margin:4px 0;}
-  .button-area{padding:16px 24px 28px;display:flex;flex-direction:column;align-items:center;gap:12px;}
-  .main-btn{width:82px;height:82px;border-radius:50%;border:none;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.12s ease,box-shadow 0.2s ease;outline:none;}
-  .main-btn::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--border);transition:border-color 0.3s;}
-  .main-btn::after{content:'';position:absolute;inset:-14px;border-radius:50%;border:1px solid var(--border);opacity:0.4;}
-  .main-btn.idle{background:var(--surface2);}
-  .main-btn.pressed{transform:scale(0.92);}
-  .main-btn.recording{background:var(--red-soft);box-shadow:0 0 28px rgba(224,92,75,0.25);}
-  .main-btn.recording::before{border-color:var(--red);animation:ring-pulse 1.5s infinite;}
-  @keyframes ring-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.06)}}
-  .btn-icon{font-size:24px;pointer-events:none;}
-  .btn-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:0.06em;text-align:center;line-height:1.8;}
-  .rec-timer{font-family:'DM Mono',monospace;font-size:12px;color:var(--red);opacity:0;transition:opacity 0.3s;}
-  .rec-timer.visible{opacity:1;}
-  .ripple{position:fixed;border-radius:50%;background:rgba(201,169,110,0.15);transform:scale(0);animation:ripple-anim 0.5s ease-out forwards;pointer-events:none;z-index:100;}
-  @keyframes ripple-anim{to{transform:scale(4);opacity:0}}
-  .toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid var(--border2);border-radius:24px;padding:8px 18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);opacity:0;transition:opacity 0.25s,transform 0.25s;pointer-events:none;white-space:nowrap;z-index:200;}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@300;400&family=Instrument+Sans:wght@300;400;500&display=swap');
+:root{
+  --bg:#0c0c0d;--surface:#141416;--surface2:#1c1c1f;
+  --border:#252528;--border2:#2e2e32;
+  --text:#e4e0d8;--text-muted:#5a5858;--text-dim:#8a8784;
+  --gold:#c9a96e;--gold-soft:rgba(201,169,110,0.10);
+  --red:#e05c4b;--red-soft:rgba(224,92,75,0.12);
+  --green:#5db88a;--green-soft:rgba(93,184,138,0.12);
+  --blue:#6c8fd6;--blue-soft:rgba(108,143,214,0.12);
+  --purple:#9b7fc7;--purple-soft:rgba(155,127,199,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Instrument Sans',sans-serif;overflow:hidden;user-select:none;}
+
+/* ── Screens ── */
+.screens-wrap{display:flex;width:200%;height:100vh;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);}
+.screens-wrap.show-therapy{transform:translateX(-50%);}
+.screen{width:50%;height:100vh;display:flex;flex-direction:column;flex-shrink:0;}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.logo{font-family:'DM Serif Display',serif;font-size:19px;letter-spacing:0.18em;color:var(--gold);}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.session-info{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);line-height:1.4;}
+.screen-switch{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.06em;cursor:pointer;padding:3px 8px;border:1px solid var(--border2);border-radius:12px;transition:all 0.2s;}
+.screen-switch:active{background:var(--surface2);}
+
+/* ── Status ── */
+.status-bar{padding:7px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);flex-shrink:0;transition:background 0.3s;}
+.status-dot.recording{background:var(--red);animation:blink 1s infinite;}
+.status-dot.ready{background:var(--green);}
+.status-dot.joy{background:var(--gold);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.status-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);flex:1;}
+.mic-source{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);}
+
+/* ── Stage switcher ── */
+.stage-bar{padding:10px 18px 8px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.stage-row{display:flex;gap:6px;margin-bottom:8px;}
+.stage-btn{flex:1;padding:7px 4px;text-align:center;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;border:1px solid var(--border);border-radius:8px;transition:all 0.2s;background:transparent;}
+.stage-btn.active{color:var(--bg);border-color:transparent;font-weight:500;}
+.stage-btn[data-stage="1"].active{background:#5db88a;}
+.stage-btn[data-stage="2"].active{background:#6c8fd6;}
+.stage-btn[data-stage="3"].active{background:#c9a96e;}
+.stage-btn[data-stage="4"].active{background:#e05c4b;}
+.stage-btn[data-stage="5"].active{background:#9b7fc7;}
+
+.stage-desc{font-size:11px;color:var(--text-dim);line-height:1.5;padding:8px 12px;background:var(--surface);border-radius:8px;border:1px solid var(--border);cursor:pointer;position:relative;}
+.stage-desc-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;}
+.stage-desc-text{font-size:11px;line-height:1.5;color:var(--text-dim);}
+.stage-desc-expand{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text-muted);}
+
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab{flex:1;padding:9px 4px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.tab-panel{display:none;flex:1;overflow-y:auto;scrollbar-width:none;}
+.tab-panel::-webkit-scrollbar{display:none;}
+.tab-panel.active{display:flex;flex-direction:column;}
+
+/* ── Feed ── */
+.feed{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);text-align:center;padding:40px 24px;gap:12px;}
+.empty-icon{font-size:28px;opacity:0.3;}
+.empty-hint{font-size:13px;line-height:1.7;max-width:220px;}
+.empty-hint span{color:var(--text-dim);}
+
+/* ── Cards ── */
+.note-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px;animation:slideIn 0.3s ease both;}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.note-card.tap-event{padding:8px 13px;display:flex;align-items:center;gap:10px;}
+.note-card.voice-note{border-left:2px solid var(--gold);}
+.note-card.live-card{border-left:2px solid var(--border2);}
+.note-card.joy-note{border-left:2px solid var(--purple);}
+.badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:20px;flex-shrink:0;}
+.badge-tap{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border2);}
+.badge-voice{background:var(--gold-soft);color:var(--gold);border:1px solid rgba(201,169,110,0.2);}
+.badge-joy{background:var(--purple-soft);color:var(--purple);border:1px solid rgba(155,127,199,0.2);}
+.badge-ep{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(108,143,214,0.2);}
+.note-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-left:auto;flex-shrink:0;}
+.tap-inline{font-size:13px;color:var(--text-dim);flex:1;}
+.note-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.note-dur{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);}
+.note-text{font-size:13px;line-height:1.65;color:var(--text);font-weight:300;}
+.note-text.dim{color:var(--text-muted);font-style:italic;font-size:12px;}
+.note-stage-tag{font-family:'DM Mono',monospace;font-size:9px;padding:1px 6px;border-radius:10px;margin-left:4px;}
+
+/* ── Waveform ── */
+.waveform{display:flex;align-items:center;gap:2px;height:20px;margin-bottom:8px;}
+.wave-bar{width:3px;border-radius:2px;background:var(--gold);opacity:0.5;transition:height 0.1s;}
+
+/* ── Audio player ── */
+.audio-player{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border2);}
+.play-btn{width:26px;height:26px;border-radius:50%;border:none;background:var(--gold);color:#0c0c0d;font-size:9px;cursor:pointer;flex-shrink:0;}
+.audio-progress{flex:1;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.audio-bar{height:100%;width:0%;background:var(--gold);border-radius:2px;transition:width 0.1s linear;}
+.audio-dur-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);flex-shrink:0;}
+
+/* ── Transcript ── */
+.transcript-item{background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--gold);border-radius:12px;padding:12px 14px;animation:slideIn 0.3s ease both;}
+.transcript-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-bottom:8px;display:flex;gap:12px;}
+.transcript-text{font-size:13px;line-height:1.7;color:var(--text);font-weight:300;}
+.transcript-text.empty-t{color:var(--text-muted);font-style:italic;font-size:12px;}
+
+/* ── Stats ── */
+.stats-section{padding:14px;display:flex;flex-direction:column;gap:12px;}
+.stats-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+.stats-card-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat-box{text-align:center;padding:10px;background:var(--surface2);border-radius:8px;}
+.stat-box-val{font-family:'DM Serif Display',serif;font-size:24px;color:var(--text);line-height:1;margin-bottom:3px;}
+.stat-box-val.gold{color:var(--gold);}
+.stat-box-val.green{color:var(--green);}
+.stat-box-val.purple{color:var(--purple);}
+.stat-box-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;}
+.day-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.day-row:last-child{border-bottom:none;}
+.day-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);width:68px;flex-shrink:0;}
+.day-bar-wrap{flex:1;height:5px;background:var(--border2);border-radius:3px;overflow:hidden;}
+.day-bar{height:100%;background:var(--gold);border-radius:3px;transition:width 0.6s ease;}
+.day-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);width:20px;text-align:right;flex-shrink:0;}
+
+/* ── Audio library ── */
+.lib-section{padding:14px;display:flex;flex-direction:column;gap:10px;}
+.lib-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
+.lib-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+.lib-item.active-track{border-color:var(--purple);}
+.lib-play{width:30px;height:30px;border-radius:50%;border:none;background:var(--purple);color:#fff;font-size:10px;cursor:pointer;flex-shrink:0;}
+.lib-name{flex:1;font-size:13px;color:var(--text);}
+.lib-dur{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);}
+.lib-delete{background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px;}
+.lib-upload{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px dashed var(--border2);border-radius:10px;cursor:pointer;font-size:13px;color:var(--text-muted);transition:all 0.2s;}
+.lib-upload:active{background:var(--surface);}
+#fileInput{display:none;}
+
+/* ── Bottom ── */
+.bottom-section{flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);}
+.stats-row{display:flex;padding:9px 18px;border-bottom:1px solid var(--border);}
+.stat{flex:1;text-align:center;}
+.stat-value{font-family:'DM Serif Display',serif;font-size:19px;color:var(--text);line-height:1;margin-bottom:2px;}
+.stat-value.gold{color:var(--gold);}
+.stat-value.purple{color:var(--purple);}
+.stat-divider{width:1px;background:var(--border);margin:4px 0;}
+.stat-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;}
+.button-area{padding:14px 24px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.main-btn{width:78px;height:78px;border-radius:50%;border:none;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:transform 0.12s ease,box-shadow 0.2s ease;outline:none;}
+.main-btn::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--border);transition:border-color 0.3s;}
+.main-btn::after{content:'';position:absolute;inset:-14px;border-radius:50%;border:1px solid var(--border);opacity:0.4;}
+.main-btn.idle{background:var(--surface2);}
+.main-btn.pressed{transform:scale(0.92);}
+.main-btn.recording{background:var(--red-soft);box-shadow:0 0 28px rgba(224,92,75,0.25);}
+.main-btn.recording::before{border-color:var(--red);animation:ring-pulse 1.5s infinite;}
+.main-btn.joy-mode{background:var(--purple-soft);box-shadow:0 0 28px rgba(155,127,199,0.2);}
+.main-btn.joy-mode::before{border-color:var(--purple);}
+.main-btn.joy-playing{background:var(--purple-soft);box-shadow:0 0 32px rgba(155,127,199,0.35);}
+.main-btn.joy-playing::before{border-color:var(--purple);animation:ring-pulse-purple 2s infinite;}
+@keyframes ring-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.06)}}
+@keyframes ring-pulse-purple{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.08)}}
+.btn-icon{font-size:22px;pointer-events:none;}
+.btn-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:0.06em;text-align:center;line-height:1.8;}
+.rec-timer{font-family:'DM Mono',monospace;font-size:12px;color:var(--red);opacity:0;transition:opacity 0.3s;}
+.rec-timer.visible{opacity:1;}
+
+/* ── Therapy screen ── */
+.therapy-screen{background:var(--bg);}
+.therapy-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.therapy-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--text);}
+.back-btn{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--border2);border-radius:12px;}
+
+.therapy-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.therapy-body{flex:1;overflow-y:auto;scrollbar-width:none;}
+.therapy-body::-webkit-scrollbar{display:none;}
+
+/* Episode list */
+.ep-section{padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ep-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color 0.2s;}
+.ep-card:active{border-color:var(--blue);}
+.ep-card.selected{border-color:var(--blue);background:var(--blue-soft);}
+.ep-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ep-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);}
+.ep-text{font-size:13px;color:var(--text);line-height:1.55;font-weight:300;}
+.ep-action{font-family:'DM Mono',monospace;font-size:10px;color:var(--blue);margin-top:6px;cursor:pointer;}
+
+/* Shnurovka */
+.shn-section{padding:14px;display:flex;flex-direction:column;gap:12px;}
+.shn-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.shn-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+.shn-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;font-size:13px;}
+.shn-item.negative{background:var(--red-soft);border:1px solid rgba(224,92,75,0.2);color:var(--text);}
+.shn-item.neutral{background:var(--green-soft);border:1px solid rgba(93,184,138,0.2);color:var(--text);}
+.shn-item.active-shn{box-shadow:0 0 0 2px var(--gold);}
+.shn-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);width:16px;flex-shrink:0;}
+.shn-text{flex:1;font-size:12px;line-height:1.5;}
+.shn-intensity{font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:12px;background:var(--surface2);color:var(--text-muted);}
+.shn-start-btn{width:100%;padding:14px;border:none;border-radius:10px;background:var(--gold);color:var(--bg);font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.08em;cursor:pointer;transition:opacity 0.2s;}
+.shn-start-btn:active{opacity:0.8;}
+.shn-start-btn:disabled{background:var(--border2);color:var(--text-muted);cursor:default;}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-height:80vh;overflow-y:auto;transform:translateY(20px);transition:transform 0.3s;}
+.modal-overlay.show .modal{transform:translateY(0);}
+.modal-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text);margin-bottom:6px;}
+.modal-stage{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;}
+.modal-section{margin-bottom:20px;}
+.modal-section-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
+.modal-text{font-size:13px;line-height:1.8;color:var(--text-dim);}
+.modal-text b{color:var(--text);}
+.modal-close{width:100%;padding:13px;border:none;border-radius:10px;background:var(--surface2);color:var(--text-dim);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;margin-top:8px;}
+
+/* ── Ripple ── */
+.ripple{position:fixed;border-radius:50%;background:rgba(201,169,110,0.15);transform:scale(0);animation:ripple-anim 0.5s ease-out forwards;pointer-events:none;z-index:100;}
+@keyframes ripple-anim{to{transform:scale(4);opacity:0}}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid var(--border2);border-radius:24px;padding:8px 18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);opacity:0;transition:opacity 0.25s,transform 0.25s;pointer-events:none;white-space:nowrap;z-index:200;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
-<div class="app">
+
+<div class="screens-wrap" id="screensWrap">
+
+<!-- ══════════ SCREEN 1: BACKGROUND MODE ══════════ -->
+<div class="screen">
   <div class="header">
     <div class="logo">ATTUNE</div>
-    <div class="session-info"><div id="sessionDate">—</div><div id="sessionTime">—</div></div>
+    <div class="header-right">
+      <div class="session-info"><span id="sessionDate">—</span> · <span id="sessionTime">—</span></div>
+      <div class="screen-switch" onclick="switchScreen(1)">Упражнения →</div>
+    </div>
   </div>
+
   <div class="status-bar">
     <div class="status-dot" id="statusDot"></div>
     <div class="status-text" id="statusText">Готов к работе</div>
     <div class="mic-source" id="micSource">📱</div>
   </div>
+
+  <!-- Stage switcher -->
+  <div class="stage-bar">
+    <div class="stage-row">
+      <div class="stage-btn active" data-stage="1" onclick="setStage(1,this)">1·Замечаю</div>
+      <div class="stage-btn" data-stage="2" onclick="setStage(2,this)">2·Эмоции</div>
+      <div class="stage-btn" data-stage="3" onclick="setStage(3,this)">3·Тело</div>
+      <div class="stage-btn" data-stage="4" onclick="setStage(4,this)">4·Мысли</div>
+      <div class="stage-btn" data-stage="5" onclick="setStage(5,this)">☀ Радость</div>
+    </div>
+    <div class="stage-desc" onclick="openModal()" id="stageDesc">
+      <div class="stage-desc-title" id="stageDescTitle">Этап 1 — Замечаю</div>
+      <div class="stage-desc-text" id="stageDescText">Нажми когда что-то пошло не так. Без анализа — просто зафиксируй момент.</div>
+      <span class="stage-desc-expand">›</span>
+    </div>
+  </div>
+
   <div class="tabs">
     <div class="tab active" onclick="switchTab('notes',this)">Заметки</div>
     <div class="tab" onclick="switchTab('transcript',this)">Текст</div>
     <div class="tab" onclick="switchTab('stats',this)">Статистика</div>
+    <div class="tab" onclick="switchTab('library',this)">🎵 Звуки</div>
   </div>
 
   <div class="tab-panel active" id="tab-notes">
@@ -144,13 +292,29 @@
         <div class="stats-grid">
           <div class="stat-box"><div class="stat-box-val" id="statTaps">0</div><div class="stat-box-label">Нажатий</div></div>
           <div class="stat-box"><div class="stat-box-val gold" id="statNotes">0</div><div class="stat-box-label">Заметок</div></div>
-          <div class="stat-box"><div class="stat-box-val" id="statSession">0′</div><div class="stat-box-label">Сессия</div></div>
-          <div class="stat-box"><div class="stat-box-val" id="statWords">0</div><div class="stat-box-label">Слов</div></div>
+          <div class="stat-box"><div class="stat-box-val green" id="statSession">0′</div><div class="stat-box-label">Сессия</div></div>
+          <div class="stat-box"><div class="stat-box-val purple" id="statJoy">0</div><div class="stat-box-label">Радость</div></div>
         </div>
       </div>
       <div class="stats-card">
         <div class="stats-card-title">Нажатия за неделю</div>
         <div id="weekChart"></div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">По этапам сегодня</div>
+        <div id="stageChart"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-library">
+    <div class="lib-section">
+      <div class="lib-title">Библиотека звуков для Радости</div>
+      <div id="libList"></div>
+      <label class="lib-upload" for="fileInput">+ Добавить аудио</label>
+      <input type="file" id="fileInput" accept="audio/*" multiple onchange="handleFileUpload(event)">
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.6;padding:8px 0;">
+        Загружай любые аудиофайлы — звуки природы, музыку, что угодно приятное. При нажатии кнопки в режиме ☀ Радость будет играть случайный трек.
       </div>
     </div>
   </div>
@@ -161,7 +325,7 @@
       <div class="stat-divider"></div>
       <div class="stat"><div class="stat-value gold" id="noteCount">0</div><div class="stat-label">Заметок</div></div>
       <div class="stat-divider"></div>
-      <div class="stat"><div class="stat-value" id="sessionDuration">0′</div><div class="stat-label">Сессия</div></div>
+      <div class="stat"><div class="stat-value purple" id="joyCount">0</div><div class="stat-label">Радость</div></div>
     </div>
     <div class="button-area">
       <div class="rec-timer" id="recTimer">● 0:00</div>
@@ -170,74 +334,239 @@
     </div>
   </div>
 </div>
+
+<!-- ══════════ SCREEN 2: THERAPY MODE ══════════ -->
+<div class="screen therapy-screen">
+  <div class="therapy-header">
+    <div class="therapy-title">Упражнения</div>
+    <div class="back-btn" onclick="switchScreen(0)">← Назад</div>
+  </div>
+
+  <div class="tabs therapy-tabs">
+    <div class="tab active" onclick="switchTherapyTab('episodes',this)">Эпизоды</div>
+    <div class="tab" onclick="switchTherapyTab('shnurovka',this)">Шнуровка</div>
+  </div>
+
+  <div class="therapy-body">
+    <div class="tab-panel active" id="therapy-tab-episodes">
+      <div class="ep-section">
+        <div class="empty-state" id="emptyEpisodes">
+          <div class="empty-icon">🗂</div>
+          <div class="empty-hint">Эпизоды появятся здесь когда ты начнёшь записывать голосовые заметки на <span>4-м этапе</span></div>
+        </div>
+        <div id="episodesList"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="therapy-tab-shnurovka">
+      <div class="shn-section">
+        <div class="stats-card" style="margin-bottom:0">
+          <div class="stats-card-title">Что такое Шнуровка</div>
+          <div class="modal-text">Чередование негативного эпизода и нейтрального — перезапись эмоционального заряда. Основа: <b>Memory Reconsolidation</b> + систематическая десенсибилизация (Вольпе). Мозг постепенно снижает интенсивность триггера.</div>
+        </div>
+        <div class="shn-card">
+          <div class="shn-title">Негативные эпизоды</div>
+          <div id="shnNegList"></div>
+          <div style="font-size:11px;color:var(--text-muted);padding:8px 0;">Выбери эпизоды из вкладки "Эпизоды" чтобы добавить сюда</div>
+        </div>
+        <div class="shn-card">
+          <div class="shn-title">Нейтральные эпизоды (спокойствие)</div>
+          <div id="shnNeutList"></div>
+          <div class="lib-upload" onclick="addNeutralEpisode()" style="margin-top:8px;">+ Добавить нейтральный эпизод</div>
+        </div>
+        <button class="shn-start-btn" id="shnStartBtn" onclick="startShnurovka()" disabled>Начать Шнуровку</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end screens-wrap -->
+
+<!-- ══════════ MODAL ══════════ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Этап 1 — Замечаю</div>
+    <div class="modal-stage" id="modalStage">Фоновый режим</div>
+    <div class="modal-section">
+      <div class="modal-section-title">Что делаешь</div>
+      <div class="modal-text" id="modalWhat"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Почему это работает</div>
+      <div class="modal-text" id="modalWhy"></div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">Закрыть</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-let tapCount=0,noteCount=0,wordCount=0;
-let tapTimer=null,tapBuffer=0;
-const DBL=320;
-let isRecording=false,mediaRecorder=null,audioChunks=[];
-let recStartTime=null,recTimerInt=null;
-let recognition=null,currentTranscript='';
-let sessionStart=Date.now();
-let audioCtx=null,currentAudio=null,currentPlayBtn=null;
+// ══════════ DATA ══════════
+const STAGES = {
+  1: {
+    color:'#5db88a', name:'Этап 1 — Замечаю',
+    short:'Нажми когда что-то пошло не так. Без анализа — просто зафиксируй момент.',
+    what:'Нажимаешь кнопку каждый раз когда что-то пошло не так. Мысль улетела в негатив. Плечи сжались. Рука потянулась к телефону. Не важно что именно — просто заметил и нажал.',
+    why:'Большинство автоматических реакций проходят незамеченными — мозг обрабатывает их быстрее чем сознание успевает среагировать. Этот этап тренирует <b>метакогнитивное внимание</b> — способность замечать собственные состояния в реальном времени. Без этого навыка любая работа с собой невозможна: нельзя изменить то чего не видишь. Каждое нажатие буквально формирует новую нейронную связь между автопилотом и осознанностью.',
+    hint:'1× — зафиксировать · 2× — записать'
+  },
+  2: {
+    color:'#6c8fd6', name:'Этап 2 — Эмоции',
+    short:'Нажми и спроси себя: что я сейчас чувствую? Злость, тревогу, обиду?',
+    what:'Нажимаешь кнопку — и на секунду задаёшь себе вопрос: <b>что я сейчас чувствую?</b> Злость? Тревогу? Обиду? Разочарование? Просто назвать — и всё. Двойное нажатие — шепни кольцу два слова.',
+    why:'Называние эмоции снижает её интенсивность — это называется <b>affect labeling</b> и подтверждено фМРТ-исследованиями. Когда ты называешь эмоцию, активируется префронтальная кора и снижается активность амигдалы — буквально физиологически становится легче. Большинство людей живут в смешанном эмоциональном фоне не различая оттенков. Этот этап развивает <b>эмоциональную гранулярность</b> — точность внутреннего словаря.',
+    hint:'1× — назвать эмоцию · 2× — записать'
+  },
+  3: {
+    color:'#c9a96e', name:'Этап 3 — Тело',
+    short:'Нажми и просканируй: где в теле сейчас напряжение? Плечи, грудь, живот?',
+    what:'Нажимаешь кнопку — и на секунду сканируешь тело. <b>Где что-то сжалось?</b> Плечи, грудь, живот, горло, руки? Просто заметить где живёт напряжение прямо сейчас.',
+    why:'Тело фиксирует эмоциональный опыт раньше чем разум успевает его осознать — это открытие соматической нейронауки (<b>Somatic Marker Hypothesis</b>, Дамасио). Хронический стресс буквально живёт в мышечных паттернах — сжатые плечи, напряжённая грудь, комок в горле. Большинство людей настолько привыкли к этому напряжению что перестали его замечать. Этот этап восстанавливает связь между разумом и телом — <b>интероцептивное осознавание</b>.',
+    hint:'1× — заметить тело · 2× — записать'
+  },
+  4: {
+    color:'#e05c4b', name:'Этап 4 — Мысли',
+    short:'Нажми — сразу включается микрофон. Скажи: ощущение, эмоция, где в теле, мысль.',
+    what:'Нажимаешь кнопку — <b>сразу включается микрофон</b>. Говоришь одним потоком: что почувствовал, где в теле, какая эмоция — и главное: <b>какая мысль при этом возникла</b>. Два-три предложения вслух.',
+    why:'К этому этапу ты уже натренировал три канала восприятия. Теперь можно работать с мыслями — тем слоем который управляет поведением. Проговаривание вслух активирует иные зоны мозга чем внутренний монолог — это <b>экстернализация опыта</b> из нарративной терапии. Голосовая заметка становится твоим зеркалом. Именно здесь начинается настоящее самопознание.',
+    hint:'1× — сразу микрофон · 2× — тоже микрофон'
+  },
+  5: {
+    color:'#9b7fc7', name:'☀ Возвращение радости',
+    short:'Нажми — включится приятный звук. Просто побудь в нём.',
+    what:'Нажимаешь кнопку — запускается аудио из твоей библиотеки. Звуки природы, музыка — что угодно что тебе приятно. <b>Просто побудь в этом ощущении</b> несколько секунд. Ещё нажатие — стоп.',
+    why:'Хронический стресс перестраивает нейронные связи — то что раньше радовало перестаёт работать (ангедония). Этот этап основан на <b>Positive Affect Training</b>: регулярное намеренное возвращение к приятным состояниям буквально переобучает нервную систему. Вибрация и звук вместе создают <b>мультисенсорный якорь</b> — способ быстро переключить состояние без усилий.',
+    hint:'1× — включить звук · ещё 1× — стоп'
+  }
+};
 
-let weekData=JSON.parse(localStorage.getItem('attune_week')||'{}');
-const todayKey=new Date().toISOString().slice(0,10);
-if(!weekData[todayKey]) weekData[todayKey]={taps:0,notes:0};
+let currentStage = 1;
+let tapCount = 0, noteCount = 0, joyCount = 0, wordCount = 0;
+let tapBuffer = 0, tapTimer = null;
+const DBL = 320;
+let isRecording = false, mediaRecorder = null, audioChunks = [];
+let recStartTime = null, recTimerInt = null;
+let recognition = null, currentTranscript = '';
+let sessionStart = Date.now();
+let audioCtx = null, currentAudio = null, currentPlayBtn = null;
+let joyAudio = null, joyPlaying = false;
+let audioLibrary = [];
+let episodes = [];
+let shnNeg = [], shnNeut = [];
 
-function init(){
-  updateClock(); setInterval(updateClock,1000);
-  setInterval(()=>{
-    const m=Math.floor((Date.now()-sessionStart)/60000);
-    document.getElementById('sessionDuration').textContent=m+"'";
-    document.getElementById('statSession').textContent=m+"'";
-  },30000);
-  detectMic(); initSR(); renderWeek();
+let weekData = JSON.parse(localStorage.getItem('attune_week') || '{}');
+let stageData = JSON.parse(localStorage.getItem('attune_stages') || '{}');
+const todayKey = new Date().toISOString().slice(0,10);
+if (!weekData[todayKey]) weekData[todayKey] = {taps:0,notes:0};
+if (!stageData[todayKey]) stageData[todayKey] = {1:0,2:0,3:0,4:0,5:0};
+
+// ══════════ INIT ══════════
+function init() {
+  updateClock(); setInterval(updateClock, 1000);
+  setInterval(() => {
+    const m = Math.floor((Date.now()-sessionStart)/60000);
+    document.getElementById('sessionDuration') && (document.getElementById('sessionDuration').textContent = m+"'");
+    document.getElementById('statSession').textContent = m+"'";
+  }, 30000);
+  detectMic(); initSR(); renderWeek(); renderStageChart(); renderLibrary();
+  updateStageUI();
 }
 
-function updateClock(){
-  const n=new Date();
-  document.getElementById('sessionDate').textContent=n.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
-  document.getElementById('sessionTime').textContent=n.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+function updateClock() {
+  const n = new Date();
+  document.getElementById('sessionDate').textContent = n.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+  document.getElementById('sessionTime').textContent = n.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 }
 
-function detectMic(){
-  if(!navigator.mediaDevices) return;
-  navigator.mediaDevices.enumerateDevices().then(ds=>{
-    const h=ds.some(d=>d.kind==='audioinput'&&d.label&&/headset|bluetooth|airpod|earphone|headphone/i.test(d.label));
-    document.getElementById('micSource').textContent=h?'🎧 наушники':'📱 телефон';
+function detectMic() {
+  if (!navigator.mediaDevices) return;
+  navigator.mediaDevices.enumerateDevices().then(ds => {
+    const h = ds.some(d => d.kind==='audioinput' && d.label && /headset|bluetooth|airpod|earphone|headphone/i.test(d.label));
+    document.getElementById('micSource').textContent = h ? '🎧 наушники' : '📱 телефон';
   }).catch(()=>{});
 }
 
-function switchTab(name,el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+// ══════════ SCREENS ══════════
+function switchScreen(idx) {
+  document.getElementById('screensWrap').classList.toggle('show-therapy', idx === 1);
+}
+
+// ══════════ TABS ══════════
+function switchTab(name, el) {
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#tab-notes,#tab-transcript,#tab-stats,#tab-library').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
 }
 
-function playBeep(f=880,d=120,t='sine'){
-  try{
-    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+function switchTherapyTab(name, el) {
+  document.querySelectorAll('.therapy-tabs .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#therapy-tab-episodes,#therapy-tab-shnurovka').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('therapy-tab-'+name).classList.add('active');
+}
+
+// ══════════ STAGES ══════════
+function setStage(n, el) {
+  currentStage = n;
+  document.querySelectorAll('.stage-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  updateStageUI();
+}
+
+function updateStageUI() {
+  const s = STAGES[currentStage];
+  document.getElementById('stageDescTitle').textContent = s.name;
+  document.getElementById('stageDescText').textContent = s.short;
+  document.getElementById('btnHint').textContent = s.hint;
+
+  const btn = document.getElementById('mainBtn');
+  if (currentStage === 5) {
+    btn.className = 'main-btn joy-mode';
+    document.getElementById('btnIcon').textContent = '☀';
+  } else if (!isRecording) {
+    btn.className = 'main-btn idle';
+    document.getElementById('btnIcon').textContent = '◉';
+  }
+}
+
+// ══════════ MODAL ══════════
+function openModal() {
+  const s = STAGES[currentStage];
+  document.getElementById('modalTitle').textContent = s.name;
+  document.getElementById('modalStage').textContent = 'Фоновый режим · нажми чтобы закрыть';
+  document.getElementById('modalWhat').innerHTML = s.what;
+  document.getElementById('modalWhy').innerHTML = s.why;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+// ══════════ BEEP ══════════
+function playBeep(f=880,d=120,t='sine') {
+  try {
+    if (!audioCtx) audioCtx = new(window.AudioContext||window.webkitAudioContext)();
     const o=audioCtx.createOscillator(),g=audioCtx.createGain();
     o.connect(g);g.connect(audioCtx.destination);
     o.type=t;o.frequency.setValueAtTime(f,audioCtx.currentTime);
     g.gain.setValueAtTime(0.3,audioCtx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d/1000);
     o.start();o.stop(audioCtx.currentTime+d/1000);
-  }catch(e){}
+  } catch(e){}
 }
 const playStartBeep=()=>{playBeep(880,100);setTimeout(()=>playBeep(1100,80),110);};
 const playStopBeep=()=>{playBeep(660,100);setTimeout(()=>playBeep(440,120),110);};
 const playTapBeep=()=>playBeep(600,60);
+const playJoyBeep=()=>{playBeep(528,150,'sine');setTimeout(()=>playBeep(660,100),160);};
 
-function initSR(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR) return;
-  function make(){
-    const r=new SR();
-    r.continuous=false; r.interimResults=true; r.lang='ru-RU'; r.maxAlternatives=1;
+// ══════════ SPEECH RECOGNITION ══════════
+function initSR() {
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if (!SR) return;
+  function make() {
+    const r = new SR();
+    r.continuous=false;r.interimResults=true;r.lang='ru-RU';r.maxAlternatives=1;
     r.onresult=e=>{
       let interim='',final='';
       for(let i=e.resultIndex;i<e.results.length;i++){
@@ -247,20 +576,21 @@ function initSR(){
       if(final) currentTranscript+=final;
       updateLive((currentTranscript+interim).trim());
     };
-    r.onend=()=>{ if(isRecording){setTimeout(()=>{if(isRecording){recognition=make();try{recognition.start();}catch(e){}}},150);} };
-    r.onerror=e=>{ if(isRecording&&e.error!=='not-allowed'){setTimeout(()=>{if(isRecording){recognition=make();try{recognition.start();}catch(e){}}},500);} };
+    r.onend=()=>{if(isRecording){setTimeout(()=>{if(isRecording){recognition=make();try{recognition.start();}catch(e){}}},150);}};
+    r.onerror=e=>{if(isRecording&&e.error!=='not-allowed'){setTimeout(()=>{if(isRecording){recognition=make();try{recognition.start();}catch(e){}}},500);}};
     return r;
   }
   recognition=make();
 }
 
-function updateLive(text){
+function updateLive(text) {
   const c=document.getElementById('live-note-card');
   if(!c) return;
   const t=c.querySelector('.note-text');
   if(t){t.textContent=text||'...слушаю...';t.classList.remove('dim');}
 }
 
+// ══════════ BUTTON ══════════
 const mainBtn=document.getElementById('mainBtn');
 mainBtn.addEventListener('click',handleClick);
 mainBtn.addEventListener('touchstart',e=>{e.preventDefault();mainBtn.classList.add('pressed');},{passive:false});
@@ -268,39 +598,85 @@ mainBtn.addEventListener('touchend',e=>{e.preventDefault();mainBtn.classList.rem
 mainBtn.addEventListener('touchcancel',()=>mainBtn.classList.remove('pressed'));
 mainBtn.addEventListener('mouseup',()=>mainBtn.classList.remove('pressed'));
 
-function handleClick(){
-  if(isRecording){stopRec();return;}
+function handleClick() {
+  // Stage 5 — joy mode
+  if (currentStage === 5) { toggleJoy(); return; }
+  // Recording stop
+  if (isRecording) { stopRec(); return; }
+  // Stage 4 — single tap = immediate mic
+  if (currentStage === 4) { startRec(); ripple(); return; }
   tapBuffer++;
   if(tapBuffer===1) tapTimer=setTimeout(()=>{if(tapBuffer===1)onSingle();tapBuffer=0;},DBL);
   else if(tapBuffer===2){clearTimeout(tapTimer);tapBuffer=0;onDouble();}
   ripple();
 }
 
-function ripple(){
+function ripple() {
   const rect=mainBtn.getBoundingClientRect();
-  const r=document.createElement('div');
-  r.className='ripple';
-  r.style.cssText=`width:82px;height:82px;left:${rect.left}px;top:${rect.top}px;`;
+  const r=document.createElement('div');r.className='ripple';
+  r.style.cssText=`width:78px;height:78px;left:${rect.left}px;top:${rect.top}px;`;
   document.body.appendChild(r);setTimeout(()=>r.remove(),600);
 }
 
-function onSingle(){
+// ══════════ SINGLE TAP ══════════
+function onSingle() {
   playTapBeep();tapCount++;
-  weekData[todayKey].taps++;saveWeek();
+  weekData[todayKey].taps++;
+  stageData[todayKey][currentStage]=(stageData[todayKey][currentStage]||0)+1;
+  saveData();
   document.getElementById('tapCount').textContent=tapCount;
   document.getElementById('statTaps').textContent=tapCount;
-  const n=new Date();
-  const ts=n.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  addTapCard(tapCount,ts);hideEmpty();showToast('Момент зафиксирован');
-  setStatus(`Нажатие #${tapCount}`,'ready');setTimeout(()=>setStatus('Готов к работе','default'),2000);
-  renderWeek();
+  const ts=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  addTapCard(tapCount,ts);hideEmpty();
+  showToast('Момент зафиксирован');
+  setStatus(`Нажатие #${tapCount}`,'ready');
+  setTimeout(()=>setStatus('Готов к работе','default'),2000);
+  renderWeek();renderStageChart();
 }
 
-function onDouble(){startRec();}
+// ══════════ DOUBLE TAP ══════════
+function onDouble() { startRec(); }
 
-async function startRec(){
+// ══════════ JOY MODE ══════════
+function toggleJoy() {
+  if (joyPlaying) {
+    stopJoy(); return;
+  }
+  if (audioLibrary.length === 0) {
+    showToast('Добавь звуки в библиотеку (вкладка 🎵)');
+    switchTab('library', document.querySelector('.tab:nth-child(4)'));
+    return;
+  }
+  playJoyBeep();
+  const track = audioLibrary[Math.floor(Math.random()*audioLibrary.length)];
+  joyAudio = new Audio(track.url);
+  joyAudio.onended = ()=>{ joyPlaying=false; mainBtn.className='main-btn joy-mode'; document.getElementById('btnIcon').textContent='☀'; setStatus('Готов к работе','default'); };
+  joyAudio.play();
+  joyPlaying = true;
+  mainBtn.className='main-btn joy-playing';
+  document.getElementById('btnIcon').textContent='⏸';
+  setStatus('Режим радости · нажми чтобы остановить','joy');
+  joyCount++;
+  stageData[todayKey][5]=(stageData[todayKey][5]||0)+1;
+  saveData();
+  document.getElementById('joyCount').textContent=joyCount;
+  document.getElementById('statJoy').textContent=joyCount;
+  addJoyCard(track.name);
+  hideEmpty();
+}
+
+function stopJoy() {
+  if(joyAudio){joyAudio.pause();joyAudio=null;}
+  joyPlaying=false;
+  mainBtn.className='main-btn joy-mode';
+  document.getElementById('btnIcon').textContent='☀';
+  setStatus('Готов к работе','default');
+}
+
+// ══════════ RECORDING ══════════
+async function startRec() {
   if(isRecording) return;
-  try{
+  try {
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     isRecording=true;currentTranscript='';audioChunks=[];recStartTime=Date.now();
     mainBtn.className='main-btn recording';
@@ -316,35 +692,37 @@ async function startRec(){
     mediaRecorder.start(100);
     if(recognition) try{recognition.start();}catch(e){}
     recTimerInt=setInterval(updateTimer,500);
-  }catch(err){showToast('Нет доступа к микрофону');setStatus('Ошибка микрофона','default');}
+  } catch(err) {showToast('Нет доступа к микрофону');}
 }
 
-function stopRec(){
+function stopRec() {
   if(!isRecording) return;
   isRecording=false;playStopBeep();
   if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
   if(recognition) try{recognition.stop();}catch(e){}
   clearInterval(recTimerInt);
-  mainBtn.className='main-btn idle';
-  document.getElementById('btnIcon').textContent='◉';
-  document.getElementById('btnHint').textContent='1× — заметить · 2× — записать';
+  mainBtn.className = currentStage===5 ? 'main-btn joy-mode' : 'main-btn idle';
+  document.getElementById('btnIcon').textContent = currentStage===5 ? '☀' : '◉';
+  document.getElementById('btnHint').textContent=STAGES[currentStage].hint;
   document.getElementById('statusDot').classList.remove('recording');
   document.getElementById('recTimer').classList.remove('visible');
   setStatus('Обработка...','default');
 }
 
-function updateTimer(){
+function updateTimer() {
   const e=Math.floor((Date.now()-recStartTime)/1000);
   document.getElementById('recTimer').textContent=`● ${Math.floor(e/60)}:${(e%60).toString().padStart(2,'0')}`;
 }
 
-function finalizeRec(){
+function finalizeRec() {
   const dur=Math.floor((Date.now()-recStartTime)/1000);
   const durStr=`${Math.floor(dur/60)}:${(dur%60).toString().padStart(2,'0')}`;
   const blob=new Blob(audioChunks,{type:'audio/webm'});
   const url=URL.createObjectURL(blob);
   const transcript=currentTranscript.trim();
-  const timeStr=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  const ts=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  const stageName=STAGES[currentStage].name;
+
   const card=document.getElementById('live-note-card');
   if(card){
     card.id='';card.classList.remove('live-card');card.classList.add('voice-note');
@@ -357,17 +735,27 @@ function finalizeRec(){
       else{textEl.textContent='🎙 Аудио сохранено · транскрипция недоступна';textEl.classList.add('dim');}
     }
   }
-  addTranscript(timeStr,durStr,transcript);
-  noteCount++;weekData[todayKey].notes++;
-  if(transcript){const wc=transcript.split(/\s+/).filter(Boolean).length;wordCount+=wc;document.getElementById('statWords').textContent=wordCount;}
-  saveWeek();
+
+  // Save episode for therapy if stage 4
+  if(currentStage===4 && transcript){
+    const ep={id:Date.now(),time:ts,dur:durStr,text:transcript,url};
+    episodes.push(ep);
+    renderEpisodes();
+  }
+
+  addTranscript(ts,durStr,transcript,stageName);
+  noteCount++;
+  if(transcript){const wc=transcript.split(/\s+/).filter(Boolean).length;wordCount+=wc;}
+  weekData[todayKey].notes++;saveData();
   document.getElementById('noteCount').textContent=noteCount;
   document.getElementById('statNotes').textContent=noteCount;
-  renderWeek();setStatus('Заметка сохранена','ready');showToast('Заметка сохранена');
+  renderWeek();
+  setStatus('Заметка сохранена','ready');showToast('Заметка сохранена');
   setTimeout(()=>setStatus('Готов к работе','default'),2500);scrollFeed();
 }
 
-function togglePlay(btn,url){
+// ══════════ AUDIO PLAYER ══════════
+function togglePlay(btn,url) {
   if(currentAudio&&currentPlayBtn&&currentPlayBtn!==btn){currentAudio.pause();currentAudio.currentTime=0;currentPlayBtn.textContent='▶';currentAudio=null;currentPlayBtn=null;}
   if(!btn._audio){
     btn._audio=new Audio(url);
@@ -378,14 +766,56 @@ function togglePlay(btn,url){
   else{btn._audio.pause();btn.textContent='▶';currentAudio=null;currentPlayBtn=null;}
 }
 
-function addTapCard(n,ts){
+// ══════════ AUDIO LIBRARY ══════════
+function handleFileUpload(event) {
+  const files=Array.from(event.target.files);
+  files.forEach(f=>{
+    const url=URL.createObjectURL(f);
+    audioLibrary.push({name:f.name.replace(/\.[^.]+$/,''),url,size:f.size});
+  });
+  renderLibrary();
+  showToast(`Добавлено треков: ${files.length}`);
+  event.target.value='';
+}
+
+function renderLibrary() {
+  const list=document.getElementById('libList');
+  if(audioLibrary.length===0){list.innerHTML='';return;}
+  list.innerHTML=audioLibrary.map((t,i)=>`
+    <div class="lib-item">
+      <button class="lib-play" onclick="previewTrack(${i},this)">▶</button>
+      <span class="lib-name">${t.name}</span>
+      <button class="lib-delete" onclick="deleteTrack(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function previewTrack(i,btn) {
+  if(joyPlaying) stopJoy();
+  const t=audioLibrary[i];
+  if(!btn._audio){
+    btn._audio=new Audio(t.url);
+    btn._audio.onended=()=>{btn.textContent='▶';};
+  }
+  if(btn._audio.paused){btn._audio.play();btn.textContent='⏸';}
+  else{btn._audio.pause();btn.textContent='▶';}
+}
+
+function deleteTrack(i) {
+  audioLibrary.splice(i,1);
+  renderLibrary();
+}
+
+// ══════════ CARD BUILDERS ══════════
+function addTapCard(n,ts) {
   const f=document.getElementById('notesFeed');
   const c=document.createElement('div');c.className='note-card tap-event';
-  c.innerHTML=`<span class="badge badge-tap">Момент</span><span class="tap-inline">Нажатие #${n}</span><span class="note-time">${ts}</span>`;
+  const stageColor=STAGES[currentStage].color;
+  c.innerHTML=`<span class="badge badge-tap">Момент</span><span class="tap-inline">Нажатие #${n}</span><span class="note-stage-tag" style="background:${stageColor}22;color:${stageColor}">${currentStage}</span><span class="note-time">${ts}</span>`;
   f.appendChild(c);scrollFeed();
 }
 
-function addLiveCard(){
+function addLiveCard() {
   const ts=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
   const f=document.getElementById('notesFeed');
   const c=document.createElement('div');c.className='note-card live-card';c.id='live-note-card';
@@ -395,15 +825,75 @@ function addLiveCard(){
   const wi=setInterval(()=>{if(!isRecording){clearInterval(wi);return;}c.querySelectorAll('.wave-bar').forEach(b=>b.style.height=(4+Math.random()*18)+'px');},120);
 }
 
-function addTranscript(ts,dur,text){
+function addJoyCard(trackName) {
+  const f=document.getElementById('notesFeed');
+  const ts=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  const c=document.createElement('div');c.className='note-card joy-note';
+  c.innerHTML=`<div class="note-header"><span class="badge badge-joy">☀ Радость</span><span class="note-dur">${trackName}</span><span class="note-time">${ts}</span></div><div class="note-text dim">Момент радости зафиксирован</div>`;
+  f.appendChild(c);scrollFeed();
+}
+
+function addTranscript(ts,dur,text,stage) {
   const f=document.getElementById('transcriptFeed');
   const e=document.getElementById('emptyTranscript');if(e)e.remove();
   const item=document.createElement('div');item.className='transcript-item';
-  item.innerHTML=`<div class="transcript-meta"><span>${ts}</span><span>${dur}</span></div><div class="transcript-text ${text?'':'empty-t'}">${text||'Транскрипция недоступна — нужен интернет и Chrome'}</div>`;
+  item.innerHTML=`<div class="transcript-meta"><span>${ts}</span><span>${dur}</span><span style="color:var(--text-dim)">${stage}</span></div><div class="transcript-text ${text?'':'empty-t'}">${text||'Транскрипция недоступна'}</div>`;
   f.appendChild(item);
 }
 
-function saveWeek(){localStorage.setItem('attune_week',JSON.stringify(weekData));}
+// ══════════ EPISODES (THERAPY) ══════════
+function renderEpisodes() {
+  const list=document.getElementById('episodesList');
+  const empty=document.getElementById('emptyEpisodes');
+  if(episodes.length===0){if(empty)empty.style.display='flex';list.innerHTML='';return;}
+  if(empty)empty.style.display='none';
+  list.innerHTML=episodes.map((ep,i)=>`
+    <div class="ep-card ${shnNeg.includes(i)?'selected':''}" id="ep-${i}">
+      <div class="ep-header"><span class="badge badge-ep">Эпизод ${i+1}</span><span class="ep-time">${ep.time} · ${ep.dur}</span></div>
+      <div class="ep-text">${ep.text}</div>
+      <div class="ep-action" onclick="addToShn(${i})">${shnNeg.includes(i)?'✓ В Шнуровке':'+ Добавить в Шнуровку'}</div>
+    </div>
+  `).join('');
+}
+
+function addToShn(i) {
+  if(shnNeg.includes(i)){
+    shnNeg=shnNeg.filter(x=>x!==i);
+  } else {
+    shnNeg.push(i);
+  }
+  renderEpisodes();
+  renderShn();
+}
+
+function addNeutralEpisode() {
+  shnNeut.push({text:`Спокойный момент ${shnNeut.length+1} — вспомни ситуацию где ты чувствовал покой`});
+  renderShn();
+}
+
+function renderShn() {
+  const negList=document.getElementById('shnNegList');
+  const neutList=document.getElementById('shnNeutList');
+  negList.innerHTML=shnNeg.map((i,idx)=>{
+    const ep=episodes[i];
+    return `<div class="shn-item negative"><span class="shn-num">${idx+1}</span><span class="shn-text">${ep.text.slice(0,60)}${ep.text.length>60?'...':''}</span><span class="shn-intensity">—/10</span></div>`;
+  }).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">Нет эпизодов — добавь из вкладки Эпизоды</div>';
+  neutList.innerHTML=shnNeut.map((ep,idx)=>`
+    <div class="shn-item neutral"><span class="shn-num">${idx+1}</span><span class="shn-text">${ep.text}</span></div>
+  `).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">Нет нейтральных эпизодов</div>';
+  document.getElementById('shnStartBtn').disabled = shnNeg.length===0 || shnNeut.length===0;
+}
+
+function startShnurovka() {
+  showToast('Шнуровка запущена — следуй инструкциям');
+  // Future: full guided session
+}
+
+// ══════════ STATS ══════════
+function saveData(){
+  localStorage.setItem('attune_week',JSON.stringify(weekData));
+  localStorage.setItem('attune_stages',JSON.stringify(stageData));
+}
 
 function renderWeek(){
   const days=[];
@@ -417,10 +907,19 @@ function renderWeek(){
   document.getElementById('weekChart').innerHTML=days.map(d=>`<div class="day-row"><div class="day-label">${d.label}</div><div class="day-bar-wrap"><div class="day-bar" style="width:${(d.taps/max)*100}%"></div></div><div class="day-val">${d.taps}</div></div>`).join('');
 }
 
+function renderStageChart(){
+  const td=stageData[todayKey]||{};
+  const colors=['#5db88a','#6c8fd6','#c9a96e','#e05c4b','#9b7fc7'];
+  const names=['Замечаю','Эмоции','Тело','Мысли','Радость'];
+  const max=Math.max(...[1,2,3,4,5].map(i=>td[i]||0),1);
+  document.getElementById('stageChart').innerHTML=[1,2,3,4,5].map((i,idx)=>`<div class="day-row"><div class="day-label" style="color:${colors[idx]}">${names[idx]}</div><div class="day-bar-wrap"><div class="day-bar" style="width:${((td[i]||0)/max)*100}%;background:${colors[idx]}"></div></div><div class="day-val">${td[i]||0}</div></div>`).join('');
+}
+
+// ══════════ HELPERS ══════════
 function hideEmpty(){const e=document.getElementById('emptyState');if(e)e.style.display='none';}
 function scrollFeed(){const f=document.getElementById('notesFeed');setTimeout(()=>f.scrollTop=f.scrollHeight,50);}
-function setStatus(text,type){document.getElementById('statusText').textContent=text;const d=document.getElementById('statusDot');d.className='status-dot';if(type==='recording')d.classList.add('recording');if(type==='ready')d.classList.add('ready');}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+function setStatus(text,type){document.getElementById('statusText').textContent=text;const d=document.getElementById('statusDot');d.className='status-dot';if(type==='recording')d.classList.add('recording');if(type==='ready')d.classList.add('ready');if(type==='joy')d.classList.add('joy');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 
 init();
 </script>
